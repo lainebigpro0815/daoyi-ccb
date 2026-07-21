@@ -7,8 +7,9 @@ export interface ChatMessage {
 
 export interface AIAction {
   action_type: string
-  params: Record<string, any>
-  summary: string
+  entity?: string
+  entity_id?: number
+  data?: Record<string, any>
 }
 
 interface AIState {

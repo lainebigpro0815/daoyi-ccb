@@ -56,8 +56,14 @@
       </div>
 
       <!-- 操作确认弹窗 -->
-      <el-dialog v-model="showConfirm" title="确认执行操作" width="360px">
-        <p>{{ store.pendingAction?.summary }}</p>
+      <el-dialog v-model="showConfirm" title="确认执行操作" width="400px">
+        <div style="font-size: 14px; line-height: 1.6;">
+          <p style="margin-bottom: 8px;">
+            <el-tag size="small">{{ store.pendingAction?.action_type }}</el-tag>
+            <el-tag size="small" type="info" style="margin-left: 4px;">{{ store.pendingAction?.entity }}</el-tag>
+          </p>
+          <pre style="background: #f5f7fa; padding: 8px; border-radius: 4px; font-size: 12px;">{{ JSON.stringify(store.pendingAction?.data || store.pendingAction, null, 2) }}</pre>
+        </div>
         <template #footer>
           <el-button @click="rejectAction">取消</el-button>
           <el-button type="primary" @click="confirmAction">确认执行</el-button>
@@ -167,9 +173,13 @@ async function confirmAction() {
   showConfirm.value = false
   try {
     const result = await executeAction(props.projectId!, store.pendingAction)
-    store.appendToLastMessage(`\n\n操作已执行: ${JSON.stringify(result)}`)
+    store.appendToLastMessage(`\n\n✅ 操作已执行: ${result.action || result.status} (${result.entity} #${result.id || ''})`)
+    // Refresh project data to reflect changes
+    const { useProjectStore } = await import('@/stores/project')
+    const pstore = useProjectStore()
+    pstore.fetchProject(props.projectId!)
   } catch (e: any) {
-    store.appendToLastMessage(`\n\n操作执行失败: ${e.message}`)
+    store.appendToLastMessage(`\n\n❌ 操作执行失败: ${e.message}`)
   }
   store.pendingAction = null
 }

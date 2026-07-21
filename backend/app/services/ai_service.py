@@ -106,7 +106,30 @@ def build_system_prompt(context: str) -> str:
 
     if context:
         parts.append(f"\n当前项目状态：\n{context}")
-        parts.append("\n注意：如果用户要求调整计划，在回复末尾添加 ```json 块输出操作，格式：{\"action_type\":\"adjust_dates\",\"params\":{...},\"summary\":\"...\"}")
+        parts.append("""
+你可以通过对话修改项目数据。需要操作时，在回复末尾添加 ```json 块输出操作指令：
+
+**操作格式：**
+```json
+{"action_type":"create|update|delete","entity":"task|risk|issue|milestone|acceptance|training|stakeholder","entity_id":数字,"data":{字段名:值}}
+```
+
+**可操作实体和字段：**
+- task: name, assignee, status(pending/in_progress/completed/blocked), progress(0-100), planned_start, planned_end
+- risk: level(高/中/低), description, category, impact, probability, mitigation, owner, status(open/closed)
+- issue: severity(严重/一般/轻微), description, module, priority(高/中/低), assignee, status(open/in_progress/resolved/closed), resolution
+- milestone: name, planned_date, actual_date, status(pending/completed/delayed), description
+- acceptance: item, standard, status(pending/passed/failed), result
+- training: content, target, planned_date, actual_date, status(pending/completed), remark
+- stakeholder: group_name(客户联系人/内部联系人), name, company, role, phone, email
+
+**示例：**
+- 创建风险: {"action_type":"create","entity":"risk","data":{"level":"高","description":"客户可能延迟付款","mitigation":"提前沟通"}}
+- 完成任务: {"action_type":"update","entity":"task","entity_id":5,"data":{"status":"completed","progress":100}}
+- 删除问题: {"action_type":"delete","entity":"issue","entity_id":3}
+
+注意：create 不需要 entity_id，update 和 delete 需要。操作需要用户确认后才执行。
+""")
     else:
         parts.append("\n用户未选择具体项目时，可以回答通用问题，或询问用户想了解哪个项目。")
 

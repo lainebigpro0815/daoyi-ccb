@@ -72,34 +72,71 @@ async def ai_query(project_id: int, req: AIQueryRequest, db: Session = Depends(g
 
 
 @project_router.post("/execute")
-def execute_action(project_id: int, action: dict, db: Session = Depends(get_db)):
-    """执行 AI 建议的操作（用户确认后调用）"""
-    action_type = action.get("action_type")
-    params = action.get("params", {})
+def execute_action(project_id: int, body: dict, db: Session = Depends(get_db)):
+    """通用 AI 操作执行器 — 对话改所有数据"""
+    from app.models.stakeholder import Stakeholder
+    from app.models.tracking import Risk, Issue, Milestone, AcceptanceItem, TrainingItem
 
-    if action_type == "adjust_dates":
-        task_ids = params.get("task_ids", [])
-        new_end = params.get("new_end")
-        if new_end:
-            from datetime import date
-            end_date = date.fromisoformat(new_end)
-            tasks = db.query(ProjectTask).filter(
-                ProjectTask.id.in_(task_ids)
-            ).all()
-            for t in tasks:
-                t.planned_end = end_date
-            db.commit()
-            return {"status": "ok", "updated": len(tasks)}
+    action_type = body.get("action_type", "none")   # create / update / delete
+    entity = body.get("entity", "")                 # task / risk / issue / milestone / acceptance / training / stakeholder
+    entity_id = body.get("entity_id")
+    data = body.get("data", {})
 
-    elif action_type == "update_task":
-        task_id = params.get("task_id")
-        updates = params.get("updates", {})
-        task = db.query(ProjectTask).filter(ProjectTask.id == task_id).first()
-        if task:
-            for key, value in updates.items():
-                if hasattr(task, key):
-                    setattr(task, key, value)
-            db.commit()
-            return {"status": "ok", "task_id": task_id}
+    # Map entity to model class
+    MODEL_MAP = {
+        "task": ProjectTask,
+        "risk": Risk,
+        "issue": Issue,
+        "milestone": Milestone,
+        "acceptance": AcceptanceItem,
+        "training": TrainingItem,
+        "stakeholder": Stakeholder,
+    }
 
-    return {"status": "ignored", "reason": "unknown action type"}
+    Model = MODEL_MAP.get(entity)
+    if not Model:
+        return {"status": "error", "reason": f"unknown entity: {entity}"}
+
+    from datetime import date
+
+    # CREATE
+    if action_type == "create":
+        if entity == "task":
+            from app.models.project import ProjectPhase
+            phase = db.query(ProjectPhase).filter(ProjectPhase.project_id == project_id).order_by(ProjectPhase.sort_order).first()
+            if not phase:
+                return {"status": "error", "reason": "no phases"}
+            obj = Model(project_phase_id=phase.id, task_number="AI", name=data.get("name", "新任务"), status="pending")
+        else:
+            obj = Model(project_id=project_id, **data)
+            if hasattr(obj, "created_at") and not obj.created_at:
+                obj.created_at = date.today()
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+        return {"status": "ok", "action": "created", "entity": entity, "id": obj.id}
+
+    # UPDATE
+    if action_type == "update":
+        filters = {Model.id: entity_id} if entity_id else {}
+        if entity == "task":
+            filters = {Model.id: entity_id} if entity_id else {}
+        obj = db.query(Model).filter(Model.id == entity_id).first() if entity_id else None
+        if not obj:
+            return {"status": "error", "reason": f"{entity}#{entity_id} not found"}
+        for k, v in data.items():
+            if hasattr(obj, k):
+                setattr(obj, k, v)
+        db.commit()
+        return {"status": "ok", "action": "updated", "entity": entity, "id": entity_id}
+
+    # DELETE
+    if action_type == "delete":
+        obj = db.query(Model).filter(Model.id == entity_id).first() if entity_id else None
+        if not obj:
+            return {"status": "error", "reason": f"{entity}#{entity_id} not found"}
+        db.delete(obj)
+        db.commit()
+        return {"status": "ok", "action": "deleted", "entity": entity, "id": entity_id}
+
+    return {"status": "ignored", "reason": "unknown action"}
