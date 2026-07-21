@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+backend/data/ccb*.db
+backend/data/ai_config.json
+backend/data/exports/
+
+# Screenshots
+e2e-*.png
+
+# Claude
+.claude/
+.superpowers/
+frontend/test.xlsx
