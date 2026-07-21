@@ -126,3 +126,38 @@ def export_excel(project_id: int, db: Session = Depends(get_db)):
         filename=f"{project.name}_项目计划.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+@router.get("/package")
+def export_delivery_package(project_id: int, db: Session = Depends(get_db)):
+    """导出项目交付包（所有文档的 zip）"""
+    import zipfile, io
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+
+    docs_dir = Path(__file__).parent.parent.parent.parent / "docs" / "projects" / str(project_id)
+    buf = io.BytesIO()
+
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        if docs_dir.exists():
+            for f in docs_dir.rglob("*"):
+                if f.is_file() and not f.name.startswith("."):
+                    arcname = str(f.relative_to(docs_dir.parent))
+                    zf.write(f, arcname)
+
+        # Also add the export excel
+        export_dir = Path(__file__).parent.parent.parent / "data" / "exports"
+        export_file = export_dir / f"project_{project_id}_plan.xlsx"
+        if export_file.exists():
+            zf.write(export_file, f"项目计划/{export_file.name}")
+
+    from fastapi.responses import StreamingResponse
+    safe_name = project.name.replace("/", "_").replace("\\", "_")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={safe_name}_交付包.zip"},
+    )
+

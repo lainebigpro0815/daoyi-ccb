@@ -45,6 +45,20 @@ class ProjectPhaseResponse(BaseModel):
         from_attributes = True
 
 
+class StakeholderItem(BaseModel):
+    id: int
+    group_name: str = ""
+    company: str = ""
+    name: str = ""
+    role: str = ""
+    phone: str = ""
+    email: str = ""
+    notes: str = ""
+
+    class Config:
+        from_attributes = True
+
+
 class ProjectResponse(BaseModel):
     id: int
     name: str
@@ -56,6 +70,7 @@ class ProjectResponse(BaseModel):
     created_at: datetime
     products: list[ProjectProductResponse] = []
     phases: list[ProjectPhaseResponse] = []
+    stakeholders: list[StakeholderItem] = []
 
     class Config:
         from_attributes = True
@@ -86,10 +101,19 @@ class ProjectList(BaseModel):
     items: list[ProjectListItem]
 
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    customer_name: Optional[str] = None
+    stage: Optional[str] = None
+    start_date: Optional[date] = None
+    status: Optional[str] = None
+
+
 class TaskUpdate(BaseModel):
     status: Optional[str] = None
     progress: Optional[int] = None
     assignee: Optional[str] = None
+    name: Optional[str] = None
     actual_start: Optional[date] = None
     actual_end: Optional[date] = None
     notes: Optional[str] = None

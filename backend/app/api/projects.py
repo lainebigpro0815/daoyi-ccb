@@ -4,9 +4,10 @@ from app.database import get_db
 from app.models.project import Project, ProjectProduct, ProjectTask
 from app.models.product import Product
 from app.schemas.project import (
-    ProjectCreate, ProjectResponse, ProjectList, ProjectListItem,
+    ProjectCreate, ProjectUpdate, ProjectResponse, ProjectList, ProjectListItem,
     TaskUpdate, ProjectPhaseResponse
 )
+from app.models.stakeholder import Stakeholder
 from app.services.plan_generator import generate_project_plan
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -61,7 +62,21 @@ def get_project(project_id: int, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
+    # Attach stakeholders
+    project.__dict__["stakeholders"] = db.query(Stakeholder).filter(
+        Stakeholder.project_id == project_id).all()
     return project
+
+
+@router.put("/{project_id}")
+def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    for k, v in data.model_dump(exclude_none=True).items():
+        setattr(project, k, v)
+    db.commit()
+    return {"message": "ok"}
 
 
 @router.put("/{project_id}/tasks/{task_id}")
@@ -86,9 +101,45 @@ def update_task(project_id: int, task_id: int, data: TaskUpdate,
         task.actual_end = data.actual_end
     if data.notes is not None:
         task.notes = data.notes
+    if data.name is not None:
+        task.name = data.name
 
     db.commit()
     return {"message": "ok"}
+
+
+@router.post("/{project_id}/tasks", status_code=201)
+def create_task(project_id: int, db: Session = Depends(get_db)):
+    """在当前项目第一个阶段下添加新任务"""
+    from app.models.project import ProjectPhase, ProjectTask
+    phase = db.query(ProjectPhase).filter(
+        ProjectPhase.project_id == project_id
+    ).order_by(ProjectPhase.sort_order).first()
+    if not phase:
+        raise HTTPException(status_code=400, detail="项目无阶段")
+    task = ProjectTask(
+        project_phase_id=phase.id,
+        task_number="N",
+        name="新任务",
+        status="pending",
+    )
+    db.add(task)
+    db.commit()
+    return task
+
+
+@router.delete("/{project_id}/tasks/{task_id}")
+def delete_task(project_id: int, task_id: int, db: Session = Depends(get_db)):
+    from app.models.project import ProjectTask
+    task = db.query(ProjectTask).filter(
+        ProjectTask.id == task_id,
+        ProjectTask.phase.has(project_id=project_id)
+    ).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    db.delete(task)
+    db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/{project_id}/phases", response_model=list[ProjectPhaseResponse])

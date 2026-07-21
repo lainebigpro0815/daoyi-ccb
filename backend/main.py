@@ -8,6 +8,10 @@ from app.api import projects as projects_api
 from app.api import ai as ai_api
 from app.api import settings as settings_api
 from app.api import export as export_api
+from app.api import stakeholders as stakeholders_api
+from app.api import docs_api
+from app.api import tracking as tracking_api
+from app.api import acceptance as acceptance_api
 
 app = FastAPI(title="CCB 项目管理系统 API", version="0.1.0")
 
@@ -35,6 +39,10 @@ app.include_router(templates_api.router)
 app.include_router(projects_api.router)
 app.include_router(settings_api.router)
 app.include_router(export_api.router)
+app.include_router(stakeholders_api.router)
+app.include_router(tracking_api.router)
+app.include_router(acceptance_api.router)
+app.include_router(docs_api.router)
 app.include_router(ai_api.router)
 app.include_router(ai_api.project_router)
 

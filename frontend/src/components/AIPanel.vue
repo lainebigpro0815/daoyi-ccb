@@ -180,8 +180,15 @@ function rejectAction() {
   store.pendingAction = null
 }
 
+function escapeHtml(text: string): string {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
 function renderMarkdown(text: string): string {
-  return text
+  const safe = escapeHtml(text)
+  return safe
     .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre style="background:#f5f5f5;padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;">$2</pre>')
     .replace(/\n/g, '<br>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
