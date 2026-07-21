@@ -29,6 +29,10 @@ backend/data/exports/
 
 # Screenshots
 e2e-*.png
+test.xlsx
+
+# Junk dirs
+D:*/
 
 # Claude
 .claude/
