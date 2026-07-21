@@ -100,6 +100,18 @@ def build_project_context(db: Session, project_id: int) -> str:
     return "\n".join(lines)
 
 
+def _msg_role(m: any) -> str:
+    return m["role"] if isinstance(m, dict) else m.role
+
+
+def _msg_content(m: any) -> str:
+    return m["content"] if isinstance(m, dict) else m.content
+
+
+def _to_api_msg(m: any) -> dict:
+    return {"role": _msg_role(m), "content": _msg_content(m)}
+
+
 def build_system_prompt(context: str) -> str:
     """构建 system prompt"""
     parts = ["你是 CCB 项目管理系统的 AI 助手，擅长回答项目相关问题。"]
@@ -172,7 +184,7 @@ async def stream_ai_response(
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=api_key, base_url=api_base)
             api_messages = [{"role": "system", "content": system}]
-            api_messages += [{"role": m.role, "content": m.content} for m in messages]
+            api_messages += [_to_api_msg(m) for m in messages]
 
             stream = await client.chat.completions.create(
                 model=actual_model,
@@ -193,7 +205,7 @@ async def stream_ai_response(
         try:
             from anthropic import AsyncAnthropic
             client = AsyncAnthropic(api_key=api_key)
-            api_messages = [{"role": m.role, "content": m.content} for m in messages]
+            api_messages = [_to_api_msg(m) for m in messages]
 
             async with client.messages.stream(
                 model=actual_model,

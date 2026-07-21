@@ -97,6 +97,19 @@ def execute_action(project_id: int, body: dict, db: Session = Depends(get_db)):
     if not Model:
         return {"status": "error", "reason": f"unknown entity: {entity}"}
 
+    # Per-entity allowed fields (prevent mass assignment)
+    ALLOWED_FIELDS = {
+        "task": {"name", "assignee", "status", "progress", "planned_start", "planned_end"},
+        "risk": {"level", "description", "category", "impact", "probability", "mitigation", "owner", "status"},
+        "issue": {"severity", "description", "module", "priority", "assignee", "status", "resolution"},
+        "milestone": {"name", "planned_date", "actual_date", "status", "description"},
+        "acceptance": {"item", "standard", "status", "result"},
+        "training": {"content", "target", "planned_date", "actual_date", "status", "remark"},
+        "stakeholder": {"group_name", "name", "company", "role", "phone", "email", "notes"},
+    }
+    allowed = ALLOWED_FIELDS.get(entity, set())
+    filtered = {k: v for k, v in data.items() if k in allowed}
+
     from datetime import date
 
     # CREATE
@@ -106,9 +119,9 @@ def execute_action(project_id: int, body: dict, db: Session = Depends(get_db)):
             phase = db.query(ProjectPhase).filter(ProjectPhase.project_id == project_id).order_by(ProjectPhase.sort_order).first()
             if not phase:
                 return {"status": "error", "reason": "no phases"}
-            obj = Model(project_phase_id=phase.id, task_number="AI", name=data.get("name", "新任务"), status="pending")
+            obj = Model(project_phase_id=phase.id, task_number="AI", **filtered)
         else:
-            obj = Model(project_id=project_id, **data)
+            obj = Model(project_id=project_id, **filtered)
             if hasattr(obj, "created_at") and not obj.created_at:
                 obj.created_at = date.today()
         db.add(obj)
@@ -116,23 +129,25 @@ def execute_action(project_id: int, body: dict, db: Session = Depends(get_db)):
         db.refresh(obj)
         return {"status": "ok", "action": "created", "entity": entity, "id": obj.id}
 
-    # UPDATE
+    # UPDATE (with project scoping)
     if action_type == "update":
-        filters = {Model.id: entity_id} if entity_id else {}
-        if entity == "task":
-            filters = {Model.id: entity_id} if entity_id else {}
-        obj = db.query(Model).filter(Model.id == entity_id).first() if entity_id else None
+        obj = db.query(Model).filter(
+            Model.id == entity_id,
+            *([Model.project_id == project_id] if hasattr(Model, "project_id") else [])
+        ).first() if entity_id else None
         if not obj:
             return {"status": "error", "reason": f"{entity}#{entity_id} not found"}
-        for k, v in data.items():
-            if hasattr(obj, k):
-                setattr(obj, k, v)
+        for k, v in filtered.items():
+            setattr(obj, k, v)
         db.commit()
         return {"status": "ok", "action": "updated", "entity": entity, "id": entity_id}
 
-    # DELETE
+    # DELETE (with project scoping)
     if action_type == "delete":
-        obj = db.query(Model).filter(Model.id == entity_id).first() if entity_id else None
+        obj = db.query(Model).filter(
+            Model.id == entity_id,
+            *([Model.project_id == project_id] if hasattr(Model, "project_id") else [])
+        ).first() if entity_id else None
         if not obj:
             return {"status": "error", "reason": f"{entity}#{entity_id} not found"}
         db.delete(obj)
