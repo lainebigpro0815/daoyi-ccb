@@ -54,5 +54,10 @@ const statusLabel = computed(() => {
 .phase-card {
   margin-bottom: 16px;
   border: 1px solid #e4e7ed;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.phase-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  border-color: #c0c4cc;
 }
 </style>

@@ -4,7 +4,7 @@
       <h1>系统设置</h1>
     </div>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="settings-card">
       <template #header>
         <span style="font-weight: 600;">AI 模型配置</span>
       </template>
@@ -44,7 +44,7 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="never" style="margin-top: 20px;">
+    <el-card shadow="never" class="settings-card" style="margin-top: 20px;">
       <template #header>
         <span style="font-weight: 600;">环境变量参考</span>
       </template>
@@ -129,3 +129,12 @@ async function handleTest() {
   }
 }
 </script>
+
+<style scoped>
+.settings-card {
+  transition: box-shadow 0.2s ease;
+}
+.settings-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.06);
+}
+</style>

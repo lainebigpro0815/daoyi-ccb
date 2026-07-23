@@ -4,6 +4,7 @@
       <h1>新建项目</h1>
     </div>
 
+    <el-card shadow="never" class="new-project-card">
     <el-form :model="form" label-width="100px" v-loading="submitting">
       <el-form-item label="项目名称" required>
         <el-input v-model="form.name" placeholder="请输入项目名称" />
@@ -28,7 +29,17 @@
                         value-format="YYYY-MM-DD" style="width: 100%" />
       </el-form-item>
 
-      <el-form-item label="产品组合" required>
+      <el-form-item label="项目模板">
+        <el-select v-model="form.template_id" clearable placeholder="选择模板（可选）" style="width: 100%">
+          <el-option v-for="t in templates" :key="t.id" :label="t.name" :value="t.id">
+            <span>{{ t.name }}</span>
+            <span style="color:#999;font-size:12px;margin-left:8px;">v{{ t.version }}</span>
+          </el-option>
+        </el-select>
+        <div style="font-size:12px;color:#999;margin-top:4px;">选择模板后，项目计划将按模板生成，否则自动生成</div>
+      </el-form-item>
+
+      <el-form-item label="产品组合" required v-if="!form.template_id">
         <el-checkbox-group v-model="form.product_ids">
           <div v-for="p in products" :key="p.id" style="margin-bottom: 8px;">
             <el-checkbox :label="p.id" :value="p.id">
@@ -46,6 +57,7 @@
         <el-button @click="$router.push('/')">取消</el-button>
       </el-form-item>
     </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -55,9 +67,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchProducts, type Product } from '@/api/products'
 import { createProject } from '@/api/projects'
+import { listTemplates } from '@/api/templates'
 
 const router = useRouter()
 const products = ref<Product[]>([])
+const templates = ref<any[]>([])
 const submitting = ref(false)
 
 const form = ref({
@@ -66,16 +80,23 @@ const form = ref({
   stage: 'signed',
   start_date: '',
   product_ids: [] as number[],
+  template_id: null as number | null,
 })
 
-const isValid = computed(() => form.value.name && form.value.start_date && form.value.product_ids.length > 0)
+const isValid = computed(() => {
+  if (!form.value.name || !form.value.start_date) return false
+  if (form.value.template_id) return true  // 选了模板不需要产品
+  return form.value.product_ids.length > 0
+})
 
 onMounted(async () => {
   try {
     products.value = await fetchProducts()
-  } catch {
-    ElMessage.error('加载产品列表失败')
-  }
+  } catch {}
+  try {
+    const res = await listTemplates()
+    templates.value = res.data
+  } catch {}
 })
 
 async function handleSubmit() {
@@ -98,3 +119,7 @@ async function handleSubmit() {
   }
 }
 </script>
+<style scoped>
+.new-project-card { transition: box-shadow 0.2s ease; }
+.new-project-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+</style>

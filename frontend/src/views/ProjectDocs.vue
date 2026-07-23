@@ -109,28 +109,106 @@ onMounted(loadTree)
   display: flex; height: calc(100vh - 160px); margin: -20px; overflow: hidden;
 }
 .doc-sidebar {
-  width: 240px; min-width: 240px; border-right: 1px solid #e5e6e8;
+  width: 260px; min-width: 260px; border-right: 1px solid #e5e6e8;
   display: flex; flex-direction: column; overflow-y: auto;
+  background: #f8f9fa;
 }
 .doc-sidebar-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 12px 8px; border-bottom: 1px solid #f0f0f0;
+  padding: 10px 14px; border-bottom: 1px solid #e5e6e8;
+  background: #f0f1f2;
+  font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+  color: #666; user-select: none;
 }
-.doc-tree { padding: 8px 0; }
-.doc-tree-node { font-size: 13px; display: flex; align-items: center; gap: 4px; }
-.doc-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-.doc-empty { color: #999; text-align: center; margin-top: 100px; }
+.doc-tree {
+  padding: 4px 0;
+  font-size: 13px;
+}
+.doc-tree :deep(.el-tree-node__content) {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 0;
+  transition: background 0.1s;
+}
+.doc-tree :deep(.el-tree-node__content:hover) {
+  background: #e8eaed;
+}
+.doc-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #d3e3fd;
+  color: #1a1a1a;
+}
+.doc-tree-node {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.doc-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #fff;
+}
+.doc-empty {
+  color: #999;
+  text-align: center;
+  margin-top: 100px;
+}
 .doc-toolbar {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 16px 20px; border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e5e6e8;
+  background: #fff;
 }
-.doc-viewer { padding: 20px; flex: 1; overflow-y: auto; }
-.markdown-body, .office-preview { line-height: 1.8; font-size: 14px; color: #1d2129; }
-.markdown-body h1, .office-preview h1 { font-size: 22px; margin: 16px 0 8px; }
-.markdown-body h2, .office-preview h2 { font-size: 18px; margin: 14px 0 6px; }
-.markdown-body h3, .office-preview h3 { font-size: 15px; margin: 12px 0 4px; }
-.markdown-body pre { background: #f5f7fa; padding: 12px; border-radius: 4px; overflow-x: auto; }
-.office-preview table { border-collapse: collapse; width: 100%; font-size: 13px; margin-bottom: 16px; }
-.office-preview td, .office-preview th { border: 1px solid #d0d0d0; padding: 6px 10px; }
-.office-preview th { background: #f5f7fa; font-weight: 600; }
+.doc-viewer {
+  padding: 24px 32px;
+  flex: 1;
+  overflow-y: auto;
+  max-width: 900px;
+}
+.markdown-body, .office-preview {
+  line-height: 1.8;
+  font-size: 14px;
+  color: #1d2129;
+}
+.markdown-body h1, .office-preview h1 {
+  font-size: 22px; margin: 20px 0 8px;
+  padding-bottom: 8px; border-bottom: 1px solid #eee;
+}
+.markdown-body h2, .office-preview h2 {
+  font-size: 18px; margin: 18px 0 6px;
+}
+.markdown-body h3, .office-preview h3 {
+  font-size: 15px; margin: 14px 0 4px;
+}
+.markdown-body pre {
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.markdown-body code {
+  background: #f0f1f2;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.office-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.office-preview td, .office-preview th {
+  border: 1px solid #d0d0d0;
+  padding: 6px 10px;
+}
+.office-preview th {
+  background: #f5f7fa;
+  font-weight: 600;
+}
 </style>

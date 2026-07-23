@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "vite build && cp electron/preload.cjs dist-electron/preload.cjs",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cd ../backend && uvicorn main:app --host 127.0.0.1 --port 8000 --reload\" \"vite\"",
+    "electron:build": "vite build && electron-builder",
+    "electron:preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.0",
@@ -17,11 +21,47 @@
     "vue": "^3.5.0",
     "vue-router": "^4.4.0"
   },
+  "build": {
+    "appId": "com.ccb.project-manager",
+    "productName": "CCB项目管理系统",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/",
+        "to": "ccb-backend.exe",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "^5.1.0",
+    "concurrently": "^10.0.3",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.5.0",
     "vite": "^5.4.0",
-    "vue-tsc": "^2.1.0"
+    "vite-plugin-electron": "^1.1.0",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "vue-tsc": "^2.1.0",
+    "wait-on": "^9.1.0"
   }
 }

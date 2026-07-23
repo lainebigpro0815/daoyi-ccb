@@ -82,6 +82,7 @@ class ProjectCreate(BaseModel):
     stage: str = "presale"
     start_date: date
     product_ids: list[int]
+    template_id: int | None = None
 
 
 class ProjectListItem(BaseModel):

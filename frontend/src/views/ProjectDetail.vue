@@ -1,6 +1,6 @@
 <template>
   <div v-loading="store.loading">
-    <div v-if="project" style="max-width: 1100px; margin: 0 auto;">
+    <div v-if="project" style="">
       <!-- 项目头部 -->
       <div class="page-header">
         <div>
@@ -36,14 +36,35 @@
       </div>
 
       <!-- 进度概览 -->
-      <el-card shadow="never" style="margin-bottom: 16px;">
+      <el-card shadow="never" style="margin-bottom: 16px;" class="overview-card">
         <div style="display: flex; align-items: center; gap: 32px; flex-wrap: wrap;">
           <div class="stat-item"><div class="stat-label">阶段</div><div class="stat-value">{{ project.phases.length }}</div></div>
           <div class="stat-item"><div class="stat-label">任务</div><div class="stat-value">{{ totalTasks }}</div></div>
           <div class="stat-item"><div class="stat-label">已完成</div><div class="stat-value" style="color: #00b42a;">{{ completedTasks }}</div></div>
-          <div style="flex: 1; min-width: 160px;"><el-progress :percentage="overallProgress" :stroke-width="14" /></div>
+          <div class="stat-item"><div class="stat-label">逾期</div><div class="stat-value" style="color: #f56c6c;">{{ overdueTaskCount }}</div></div>
+          <div style="flex: 1; min-width: 160px;"><el-progress :percentage="overallProgress" :stroke-width="14" class="animated-progress" /></div>
         </div>
       </el-card>
+
+      <!-- 逾期任务 -->
+      <div v-if="projectOverdueTasks.length > 0" class="overdue-bar" @click="showOverdueDetail = !showOverdueDetail">
+        <el-icon size="14" color="#f56c6c"><WarningFilled /></el-icon>
+        <span style="font-weight:500;">{{ projectOverdueTasks.length }} 个逾期任务</span>
+        <el-icon size="12" style="margin-left:auto;transition:transform .2s;" :style="{ transform: showOverdueDetail ? 'rotate(180deg)' : '' }"><ArrowDown /></el-icon>
+      </div>
+
+      <transition name="slide-up">
+        <div v-if="showOverdueDetail" class="overdue-detail">
+          <div v-for="(ot, i) in projectOverdueTasks" :key="i" class="overdue-item">
+            <el-tag size="small" type="danger" style="min-width:56px;">逾期 {{ ot.overdue_days }} 天</el-tag>
+            <el-tag size="small">{{ ot.phase_name }}</el-tag>
+            <span style="font-weight:500;">{{ ot.task_name }}</span>
+            <span v-if="ot.assignee" style="color:#999;">({{ ot.assignee }})</span>
+            <span style="color:#999;font-size:12px;">截止 {{ ot.planned_end }}</span>
+            <el-progress :percentage="ot.progress" :width="40" :stroke-width="4" style="margin-left:auto;" />
+          </div>
+        </div>
+      </transition>
 
       <!-- Tab -->
       <el-tabs v-model="activeTab" type="border-card" style="margin-bottom: 16px;">
@@ -55,10 +76,11 @@
         <el-tab-pane label="培训计划" name="training" />
         <el-tab-pane label="干系人" name="stakeholder" />
         <el-tab-pane label="文档" name="doc" />
+        <el-tab-pane label="周报" name="report" />
       </el-tabs>
 
       <!-- ========== 任务计划 ========== -->
-      <div v-show="activeTab === 'plan'">
+      <div v-show="activeTab === 'plan'" class="tab-content-pane">
         <div style="margin-bottom: 8px;">
           <el-button size="small" type="primary" @click="addTask" v-if="viewMode === 'table'">+ 新任务</el-button>
         </div>
@@ -110,6 +132,7 @@
 
       <!-- ===== 看板 ====== -->
       <div v-show="activeTab === 'plan' && viewMode === 'kanban'" class="kanban-board">
+        <transition-group name="fade" tag="div" style="display:flex;gap:12px;flex:1;">
         <div class="kanban-col" v-for="col in kanbanColumns" :key="col.status">
           <div class="kanban-header">
             <el-tag :type="col.tag">{{ col.label }}</el-tag>
@@ -131,6 +154,7 @@
             </div>
           </div>
         </div>
+      </transition-group>
       </div>
 
       <!-- ========== 风险 ========== -->
@@ -323,14 +347,14 @@
 
       <!-- ========== 文档 ========== -->
       <div v-show="activeTab === 'doc'" class="doc-tab">
-        <div style="display: flex; gap: 0; height: calc(100vh - 420px); margin: -16px; overflow: hidden;">
+        <div class="doc-frame">
           <div class="doc-tree-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;">
-              <span style="font-weight: 600; font-size: 14px;">文档目录</span>
-              <div style="display: flex; gap: 4px;">
-                <el-button size="small" circle @click="downloadPackage" :loading="packaging"><el-icon><Download /></el-icon></el-button>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid #e5e6e8; background:#f0f1f2; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:#666; user-select:none;">
+              <span>文档</span>
+              <div style="display: flex; gap: 2px;">
+                <el-button size="small" link @click="downloadPackage" :loading="packaging"><el-icon size="14"><Download /></el-icon></el-button>
                 <el-upload :action="`/api/projects/${projectId}/docs/upload`" :show-file-list="false" :on-success="loadDocTree">
-                  <el-button size="small" circle><el-icon><Plus /></el-icon></el-button>
+                  <el-button size="small" link><el-icon size="14"><Plus /></el-icon></el-button>
                 </el-upload>
               </div>
             </div>
@@ -352,9 +376,9 @@
               <el-icon size="40"><FolderOpened /></el-icon><p style="margin-top: 8px;">选择文档查看</p>
             </div>
             <template v-else>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
-                <div><span style="font-weight: 600;">{{ currentDoc.name }}</span><el-tag size="small" style="margin-left: 6px;">{{ currentDoc.ext }}</el-tag></div>
-                <div style="display: flex; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 20px; border-bottom: 1px solid #e5e6e8; background:#fafafa;">
+                <div><span style="font-weight: 500;">{{ currentDoc.name }}</span><el-tag size="small" style="margin-left: 6px;">{{ currentDoc.ext }}</el-tag></div>
+                <div style="display: flex; gap: 6px;">
                   <el-button size="small" @click="downloadDoc">下载</el-button>
                   <template v-if="currentDoc.ext === '.md'">
                     <el-switch v-model="docEditing" active-text="编辑" inactive-text="预览" size="small" />
@@ -362,7 +386,7 @@
                   </template>
                 </div>
               </div>
-              <div style="padding: 20px; overflow-y: auto; flex: 1;">
+              <div style="padding: 24px 32px; overflow-y: auto; flex: 1; max-width: 900px;">
                 <template v-if="currentDoc.ext === '.md'">
                   <div v-if="!docEditing" class="markdown-body" v-html="renderedHtml"></div>
                   <el-input v-else v-model="docContent" type="textarea" :rows="25" />
@@ -373,6 +397,26 @@
             </template>
           </div>
         </div>
+      </div>
+
+      <!-- ========== 周报 ========== -->
+      <div v-show="activeTab === 'report'">
+        <el-card shadow="never">
+          <div style="margin-bottom:16px;">
+            <el-button type="primary" @click="generateReport" :loading="reportLoading">
+              {{ reportLoading ? '生成中...' : '生成周报' }}
+            </el-button>
+            <el-button @click="exportWord" :disabled="!reportText" style="margin-left:12px;">
+              导出 Word
+            </el-button>
+          </div>
+          <div v-if="reportText" class="report-preview">
+            <div class="report-content markdown-body" v-html="renderReport(reportText)"></div>
+          </div>
+          <div v-else style="color:#999;text-align:center;padding:40px;">
+            点击"生成周报"，AI 自动根据当前项目进度生成
+          </div>
+        </el-card>
       </div>
     </div>
   </div>
@@ -386,6 +430,19 @@ import { useProjectStore } from '@/stores/project'
 import { updateTask } from '@/api/tasks'
 import api from '@/api'
 import PhaseCard from '@/components/PhaseCard.vue'
+import { getWeeklyReport, exportReport } from '@/api/report'
+
+interface OverdueTask {
+  project_id: number
+  project_name: string
+  phase_name: string
+  task_id: number
+  task_name: string
+  assignee: string
+  planned_end: string
+  progress: number
+  overdue_days: number
+}
 
 const route = useRoute()
 const store = useProjectStore()
@@ -414,10 +471,18 @@ const trainingItems = ref<any[]>([])
 const packaging = ref(false)
 const docContent = ref('')
 const docEditing = ref(false)
+const allOverdueTasks = ref<OverdueTask[]>([])
+const showOverdueDetail = ref(false)
+const reportText = ref('')
+const reportLoading = ref(false)
 
 const totalTasks = computed(() => project.value?.phases.reduce((s: number, p: any) => s + p.tasks.length, 0) || 0)
 const completedTasks = computed(() => project.value?.phases.reduce((s: number, p: any) => s + p.tasks.filter((t: any) => t.status === 'completed').length, 0) || 0)
 const overallProgress = computed(() => totalTasks.value ? Math.round(completedTasks.value / totalTasks.value * 100) : 0)
+const projectOverdueTasks = computed(() =>
+  allOverdueTasks.value.filter(t => t.project_id === projectId.value)
+)
+const overdueTaskCount = computed(() => projectOverdueTasks.value.length)
 
 // Kanban
 const kanbanColumns = [
@@ -472,7 +537,7 @@ async function quickComplete(row: any) { await updateTask(projectId.value, row._
 async function quickUncomplete(row: any) { await updateTask(projectId.value, row._taskId, { status: 'pending', progress: 0 }); store.fetchProject(projectId.value) }
 async function addTask() { await api.post(`/projects/${projectId.value}/tasks`); store.fetchProject(projectId.value) }
 async function deleteTask(row: any) { await api.delete(`/projects/${projectId.value}/tasks/${row._taskId}`); store.fetchProject(projectId.value) }
-function refreshProject() { store.fetchProject(projectId.value); loadStakeholders(); loadRisks(); loadIssues(); }
+function refreshProject() { store.fetchProject(projectId.value); loadStakeholders(); loadRisks(); loadIssues(); fetchOverdueTasks() }
 
 // Stakeholders
 async function loadStakeholders() { const r = await api.get(`/projects/${projectId.value}/stakeholders`); stakeholders.value = r.data.items || [] }
@@ -534,7 +599,59 @@ watch(activeTab, (t) => {
   if (t === 'doc') loadDocTree()
 })
 
-onMounted(() => { store.fetchProject(projectId.value); loadStakeholders(); })
+async function fetchOverdueTasks() {
+  try {
+    const res = await api.get('/overdue')
+    allOverdueTasks.value = res.data || []
+  } catch {
+    // silently ignore
+  }
+}
+
+// ── 周报 ──
+async function generateReport() {
+  reportLoading.value = true
+  try {
+    const res = await getWeeklyReport(projectId.value)
+    reportText.value = res.data.report_text
+  } catch (e: any) {
+    ElMessage.error('生成失败: ' + e.message)
+  } finally {
+    reportLoading.value = false
+  }
+}
+
+async function exportWord() {
+  if (!reportText.value) return
+  try {
+    const res = await exportReport(projectId.value, 'weekly')
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const a = document.createElement('a'); a.href = url; a.download = `周报_${projectId.value}.docx`
+    a.click(); window.URL.revokeObjectURL(url)
+  } catch { ElMessage.error('导出失败') }
+}
+
+function renderReport(text: string): string {
+  const div = document.createElement('div'); div.textContent = text; const safe = div.innerHTML
+  return safe
+    .replace(/### (.*)/g, '<h3>$1</h3>')
+    .replace(/## (.*)/g, '<h2 style="margin-top:20px;">$1</h2>')
+    .replace(/# (.*)/g, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/- (.*)/g, '<li style="margin-left:16px;">$1</li>')
+    .replace(/\n/g, '<br>')
+}
+
+onMounted(() => {
+  store.fetchProject(projectId.value); loadStakeholders(); fetchOverdueTasks()
+  // Listen for AI actions to refresh data
+  window.addEventListener('ccb:ai-action', () => {
+    store.fetchProject(projectId.value)
+    loadStakeholders(); loadRisks(); loadIssues()
+    loadMilestones(); loadAcceptance(); loadTraining()
+    fetchOverdueTasks()
+  })
+})
 </script>
 
 <style scoped>
@@ -542,18 +659,68 @@ onMounted(() => { store.fetchProject(projectId.value); loadStakeholders(); })
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .phase-row { font-weight: 600; background: #f7f8fa; padding: 4px 8px; border-radius: 4px; margin: -4px 0; }
 .stat-item { text-align: center; min-width: 60px; }
-.doc-tab { margin: -16px; }
-.doc-tree-panel { width: 240px; min-width: 240px; border-right: 1px solid #e5e6e8; display: flex; flex-direction: column; overflow-y: auto; }
+.doc-tab { margin: 0; }
+.doc-frame {
+  display: flex;
+  height: calc(100vh - 460px);
+  overflow: hidden;
+  border: 1px solid #e5e6e8;
+  border-radius: 6px;
+}
+.doc-tree-panel {
+  width: 260px; min-width: 260px;
+  border-right: 1px solid #e5e6e8;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+  background: #f8f9fa;
+}
+.doc-tree-panel :deep(.el-tree-node__content) {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 0;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f0f0f0;
+}
+.doc-tree-panel :deep(.el-tree-node__content:hover) {
+  background: #e8eaed;
+}
+.doc-tree-panel :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #d3e3fd;
+  color: #1a1a1a;
+}
+.doc-tree-panel :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  border-bottom-color: transparent;
+}
 .markdown-body, .office-preview { line-height: 1.8; font-size: 14px; }
-.markdown-body h1, .office-preview h1 { font-size: 22px; margin: 16px 0 8px; }
+.markdown-body h1, .office-preview h1 { font-size: 22px; margin: 16px 0 8px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
 .markdown-body h2, .office-preview h2 { font-size: 18px; margin: 14px 0 6px; }
+.markdown-body code { background: #f0f1f2; padding: 2px 4px; border-radius: 3px; font-size: 13px; }
+.markdown-body pre { background: #f5f7fa; padding: 12px; border-radius: 4px; overflow-x: auto; }
 .office-preview table { border-collapse: collapse; width: 100%; font-size: 13px; }
 .office-preview td, .office-preview th { border: 1px solid #d0d0d0; padding: 6px 10px; }
 .kanban-board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; }
+.overdue-bar { display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:16px;background:#fef0f0;border:1px solid #fde2e2;border-radius:6px;cursor:pointer;font-size:13px;color:#f56c6c; }
+.overdue-bar:hover { background:#fde2e2; }
+.overdue-detail { margin:-12px 0 16px;padding:8px 0;background:#fef0f0;border:1px solid #fde2e2;border-top:none;border-radius:0 0 6px 6px; }
+.overdue-item { display:flex;align-items:center;gap:6px;padding:4px 14px;font-size:13px; }
+.report-preview { margin-top:16px;padding:20px;background:#f9fafb;border-radius:6px;animation:fadeUp 0.3s ease; }
+.report-content { font-size:14px;line-height:1.8; }
+@keyframes fadeUp { from { opacity:0;transform:translateY(8px); } to { opacity:1;transform:translateY(0); } }
 .kanban-col { flex: 1; min-width: 200px; background: #f5f7fa; border-radius: 8px; padding: 12px; }
 .kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .kanban-list { display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
-.kanban-card { background: #fff; border: 1px solid #e5e6e8; border-radius: 6px; padding: 10px 12px; cursor: grab; }
-.kanban-card:hover { border-color: #409eff; box-shadow: 0 1px 4px rgba(64,158,255,.15); }
+.kanban-card { background: #fff; border: 1px solid #e5e6e8; border-radius: 6px; padding: 10px 12px; cursor: grab; transition: all 0.2s ease; }
+.kanban-card:hover { border-color: #409eff; box-shadow: 0 2px 8px rgba(64,158,255,.15); transform: translateY(-1px); }
 .kanban-card:active { cursor: grabbing; }
+
+.overview-card { transition: box-shadow 0.2s ease; }
+.overview-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.animated-progress { transition: all 0.5s ease; }
+.stat-item { text-align: center; min-width: 60px; transition: transform 0.15s ease; }
+.stat-item:hover { transform: translateY(-2px); }
+.tab-content-pane { animation: paneFadeIn 0.25s ease; }
+@keyframes paneFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>

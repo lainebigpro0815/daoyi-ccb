@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.project import Project, ProjectProduct, ProjectTask
+from app.models.project import Project, ProjectProduct, ProjectPhase, ProjectTask
 from app.models.product import Product
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectResponse, ProjectList, ProjectListItem,
@@ -42,7 +42,37 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db)):
 
     # 自动生成计划
     try:
-        project = generate_project_plan(db, project.id)
+        if data.template_id:
+            from app.models.template import ProcessTemplate, PhaseDefinition, TaskDefinition
+            from sqlalchemy.orm import selectinload
+            import datetime
+
+            tpl = db.query(ProcessTemplate).options(
+                selectinload(ProcessTemplate.phases).selectinload(PhaseDefinition.tasks)
+            ).filter(ProcessTemplate.id == data.template_id).first()
+            if tpl:
+                cursor = project.start_date
+                for td in tpl.phases:
+                    phase = ProjectPhase(
+                        project_id=project.id, phase_number=td.phase_number,
+                        name=td.name, status="pending", planned_start=cursor,
+                        planned_end=None, sort_order=td.sort_order,
+                    )
+                    db.add(phase); db.flush()
+                    for tsk in td.tasks:
+                        db.add(ProjectTask(
+                            project_phase_id=phase.id, task_number=tsk.task_number,
+                            name=tsk.name, status="pending", progress=0,
+                            planned_start=cursor, planned_end=None, sort_order=tsk.sort_order,
+                        ))
+                    total_days = sum((t.estimated_days or 1) for t in td.tasks)
+                    end = cursor + datetime.timedelta(days=int(total_days))
+                    phase.planned_end = end
+                    cursor = end + datetime.timedelta(days=1)
+                project.planned_end_date = cursor
+                db.commit()
+        else:
+            project = generate_project_plan(db, project.id)
     except ValueError as e:
         db.delete(project)
         db.commit()

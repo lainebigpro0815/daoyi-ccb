@@ -6,6 +6,7 @@
         :model-value="task.status === 'completed'"
         @change="toggleComplete"
         :disabled="task.status === 'blocked'"
+        class="task-checkbox"
       />
 
       <!-- 任务信息 -->
@@ -105,20 +106,30 @@ async function doUpdate(data: any) {
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   background: #fafafa;
+  transition: all 0.2s ease;
 }
 .task-item:hover {
   background: #f0f5ff;
   border-color: #409eff;
+  transform: translateX(2px);
 }
 .task-completed {
   opacity: 0.7;
+  transition: opacity 0.3s ease;
 }
 .task-completed .task-name {
   text-decoration: line-through;
   color: #999;
+  transition: color 0.3s ease;
 }
 .task-name {
   font-size: 14px;
   font-weight: 500;
+}
+.task-checkbox {
+  transition: transform 0.15s ease;
+}
+.task-checkbox:hover {
+  transform: scale(1.1);
 }
 </style>

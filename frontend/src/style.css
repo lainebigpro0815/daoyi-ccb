@@ -94,6 +94,7 @@ html, body, #app {
   padding: 24px;
   background: #f2f3f5;
   min-width: 0;
+  border-right: 1px solid #dcdfe6;
 }
 
 /* ========== Cards ========== */
@@ -114,12 +115,39 @@ html, body, #app {
 .el-table {
   border-radius: 8px;
   overflow: hidden;
+  width: 100%;
 }
 
 .el-table th.el-table__cell {
   background: #f7f8fa;
   font-weight: 600;
   color: #4e5969;
+}
+
+/* Remove fixed column widths on tables so they flex proportionally */
+.el-table__body-wrapper table,
+.el-table__header-wrapper table {
+  width: 100% !important;
+}
+.el-table th .cell,
+.el-table td .cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== Slide-left (AI panel) ========== */
+
+.slide-left-enter-active {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.slide-left-leave-active {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
 /* ========== Phase Cards ========== */
@@ -211,4 +239,50 @@ html, body, #app {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8abb3;
+}
+
+/* ========== Page transitions ========== */
+
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease, transform 0.25s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* ========== Fade transition (dialogs, cards) ========== */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ========== Slide-up transition ========== */
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }

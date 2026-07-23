@@ -15,8 +15,10 @@ class AIQueryRequest(BaseModel):
 
 
 class AIAction(BaseModel):
-    action_type: Literal["update_task", "adjust_dates", "generate_doc", "none"]
-    params: dict = {}
+    action_type: Literal["create", "update", "delete", "none"]
+    entity: str = ""
+    entity_id: int | None = None
+    data: dict = {}
     summary: str = ""
 
 

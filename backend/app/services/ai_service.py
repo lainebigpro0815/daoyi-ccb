@@ -167,12 +167,29 @@ async def stream_ai_response(
     # Mock
     if actual_provider == "mock" or not api_key:
         ctx_len = len(context) if context else 0
-        if ctx_len > 0:
-            mock = f"【开发模式】已收到你的问题。项目上下文已加载（{ctx_len}字符）。\n\n配置环境变量即可接入真实 AI：\n- DeepSeek: AI_PROVIDER=openai OPENAI_API_KEY=sk-...\n- Claude: ANTHROPIC_API_KEY=sk-ant-..."
+        # Mock mode - simulate intent for UI testing
+        msg_text = _msg_content(messages[-1]) if messages else ""
+        mock_text = "【Mock 模式】已收到请求。"
+        mock_action = None
+
+        if "新增" in msg_text or "添加" in msg_text or "创建" in msg_text:
+            mock_text += "\n\n已解析到创建意图。模拟创建一条示例数据。"
+            mock_action = '{"action_type":"create","entity":"task","entity_id":null,"data":{"name":"模拟任务","assignee":"张三","status":"pending","progress":0}}'
+        elif "改" in msg_text or "更新" in msg_text or "修改" in msg_text or "完成" in msg_text:
+            mock_text += "\n\n已解析到更新意图。模拟完成任务 #1。"
+            mock_action = '{"action_type":"update","entity":"task","entity_id":1,"data":{"status":"completed","progress":100}}'
+        elif "删除" in msg_text or "移除" in msg_text:
+            mock_text += "\n\n已解析到删除意图。模拟删除任务 #1。"
+            mock_action = '{"action_type":"delete","entity":"task","entity_id":1,"data":{}}'
         else:
-            mock = "【开发模式】你好！我是 AI 助手。你可以选择一个项目来询问进度，或者问我通用问题。\n\n配置环境变量即可接入真实 AI。"
-        for i in range(0, len(mock), 3):
-            yield mock[i:i+3]
+            mock_text += "\n\n对话功能需要配置 API Key 后使用。\n\n前往「系统设置」→ AI 模型配置 填写 API Key。"
+
+        # 生成包含 action JSON 的回复，让前端能收到 action 事件
+        full = mock_text
+        if mock_action:
+            full += f"\n\n模拟操作指令：\n```json\n{mock_action}\n```"
+        for i in range(0, len(full), 3):
+            yield full[i:i+3]
             await asyncio.sleep(0.02)
         return
 

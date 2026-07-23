@@ -25,9 +25,24 @@ const router = createRouter({
       component: () => import('@/views/ProjectDocs.vue'),
     },
     {
+      path: '/templates',
+      name: 'templates',
+      component: () => import('@/views/Templates.vue'),
+    },
+    {
+      path: '/report',
+      name: 'report',
+      component: () => import('@/views/Report.vue'),
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/Settings.vue'),
+    },
+    {
+      path: '/settings/email',
+      name: 'email-settings',
+      component: () => import('@/views/EmailSettings.vue'),
     },
   ],
 })
